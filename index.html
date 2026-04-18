@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🎡 Çark Çevirme — Çekiliş</title>
+  <meta name="description" content="Adil ve eğlenceli çark çevirme çekiliş uygulaması."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="container">
+  <header class="header">
+    <div class="header-icon">🎡</div>
+    <h1>Çark Çevirme</h1>
+    <p class="subtitle">İsimleri ekle, şansını dene!</p>
+  </header>
+
+  <div class="main-layout">
+
+    <aside class="panel names-panel">
+      <h2 class="panel-title">👥 Katılımcılar</h2>
+      <div class="input-group">
+        <input id="nameInput" type="text" class="name-input" placeholder="İsim gir..." maxlength="30" autocomplete="off"/>
+        <button id="addBtn" class="btn btn-add">Ekle</button>
+      </div>
+      <div id="nameList" class="name-list">
+        <div class="empty-state"><span>👆</span><p>Henüz kimse eklenmedi</p></div>
+      </div>
+      <div class="panel-footer">
+        <span id="countBadge" class="count-badge">0 kişi</span>
+        <button id="clearAllBtn" class="btn btn-ghost">Temizle</button>
+      </div>
+    </aside>
+
+    <main class="wheel-section">
+      <div class="wheel-wrapper">
+        <div class="wheel-pointer">▼</div>
+        <canvas id="wheelCanvas" width="480" height="480"></canvas>
+        <div class="wheel-center-cap"></div>
+      </div>
+      <button id="spinBtn" class="btn btn-spin" disabled>
+        <span class="spin-icon">🎲</span><span>Çevir!</span>
+      </button>
+      <div id="resultOverlay" class="result-overlay hidden">
+        <div class="result-card">
+          <div class="result-confetti" id="confettiArea"></div>
+          <div class="result-emoji">🎉</div>
+          <p class="result-label">Kazanan!</p>
+          <h2 id="resultName" class="result-name"></h2>
+          <button id="resultClose" class="btn btn-close">Tekrar Dön</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="panel history-panel">
+      <h2 class="panel-title">🏆 Geçmiş</h2>
+      <div id="historyList" class="history-list">
+        <div class="empty-state"><span>📋</span><p>Henüz çekilmiş yok</p></div>
+      </div>
+      <button id="clearHistoryBtn" class="btn btn-ghost" style="margin-top:12px;">Geçmişi Sil</button>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+const COLORS=["#7c6fcd","#5de0e6","#f7b731","#ff6b6b","#48dbfb","#ff9ff3","#54a0ff","#5f27cd","#00d2d3","#ff9f43","#ee5a24","#009432","#0652DD","#833471","#EA2027","#006266","#1289A7","#C4E538","#FDA7DF","#D980FA"];
+let participants=[],spinning=false,drawHistory=[];
+const canvas=document.getElementById("wheelCanvas"),ctx=canvas.getContext("2d"),nameInput=document.getElementById("nameInput"),addBtn=document.getElementById("addBtn"),nameList=document.getElementById("nameList"),countBadge=document.getElementById("countBadge"),spinBtn=document.getElementById("spinBtn"),clearAllBtn=document.getElementById("clearAllBtn"),resultOverlay=document.getElementById("resultOverlay"),resultName=document.getElementById("resultName"),resultClose=document.getElementById("resultClose"),historyList=document.getElementById("historyList"),clearHistoryBtn=document.getElementById("clearHistoryBtn");
+function drawWheel(rotation){const W=canvas.width,cx=W/2,cy=W/2,r=W/2-8;ctx.clearRect(0,0,W,W);if(participants.length===0){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,0.04)";ctx.fill();ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="bold 18px Inter,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("İsim ekle!",cx,cy);return;}const sa=(2*Math.PI)/participants.length;participants.forEach((p,i)=>{const s=rotation+i*sa,e=s+sa;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,s,e);ctx.closePath();ctx.fillStyle=p.color;ctx.fill();ctx.strokeStyle="rgba(0,0,0,0.25)";ctx.lineWidth=1.5;ctx.stroke();ctx.save();ctx.translate(cx,cy);ctx.rotate(s+sa/2);const ml=13,lb=p.name.length>ml?p.name.slice(0,ml-1)+"…":p.name,fs=participants.length>12?11:participants.length>8?13:15;ctx.font=`bold ${fs}px Inter,sans-serif`;ctx.fillStyle="#fff";ctx.shadowColor="rgba(0,0,0,0.6)";ctx.shadowBlur=4;ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(lb,r-14,0);ctx.restore();});ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle="rgba(255,255,255,0.15)";ctx.lineWidth=4;ctx.stroke();}
+function addParticipant(label){label=label.trim();if(!label)return;participants.push({id:Date.now()+Math.random(),name:label,color:COLORS[participants.length%COLORS.length]});renderList();drawWheel(0);updateBtn();}
+function removeParticipant(id){participants=participants.filter(p=>p.id!==id);participants.forEach((p,i)=>{p.color=COLORS[i%COLORS.length];});renderList();drawWheel(0);updateBtn();}
+function renderList(){if(participants.length===0){nameList.innerHTML='<div class="empty-state"><span>👆</span><p>Henüz kimse eklenmedi</p></div>';countBadge.textContent="0 kişi";return;}countBadge.textContent=participants.length+" kişi";nameList.innerHTML=participants.map(p=>`<div class="name-item"><span class="name-dot" style="background:${p.color}"></span><span class="name-text">${esc(p.name)}</span><button class="remove-btn" data-id="${p.id}">✕</button></div>`).join("");nameList.querySelectorAll(".remove-btn").forEach(b=>{b.addEventListener("click",()=>removeParticipant(+b.dataset.id));});}
+function updateBtn(){spinBtn.disabled=participants.length<2||spinning;}
+function pickWinner(){return Math.floor(Math.random()*participants.length);}
+function spin(){if(spinning||participants.length<2)return;spinning=true;updateBtn();const wi=pickWinner(),sa=(2*Math.PI)/participants.length,tm=-(Math.PI/2)-(wi*sa+sa/2),ex=(8+Math.floor(Math.random()*6))*2*Math.PI,fa=ex+tm,dur=5500+Math.random()*1500,st=performance.now();function frame(now){const el=now-st,pr=Math.min(el/dur,1),ez=1-Math.pow(1-pr,4),ag=fa*ez;drawWheel(ag);if(pr<1){requestAnimationFrame(frame);}else{drawWheel(fa);spinning=false;updateBtn();showResult(participants[wi]);addToHistory(participants[wi]);}}requestAnimationFrame(frame);}
+function showResult(w){resultName.textContent=w.name;resultOverlay.classList.remove("hidden");spawnConfetti(w.color);}
+function spawnConfetti(mc){const ar=document.getElementById("confettiArea");ar.innerHTML="";const cs=[mc,"#fff","#f7b731","#5de0e6","#ff6b6b"];for(let i=0;i<55;i++){const el=document.createElement("div");el.className="confetti-piece";el.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*-20}%;background:${cs[Math.floor(Math.random()*cs.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?"50%":"2px"};animation-duration:${1.2+Math.random()*1.4}s;animation-delay:${Math.random()*.6}s;`;ar.appendChild(el);}}
+function addToHistory(w){const t=new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});drawHistory.unshift({name:w.name,color:w.color,time:t});renderHistory();}
+function renderHistory(){if(drawHistory.length===0){historyList.innerHTML='<div class="empty-state"><span>📋</span><p>Henüz çekilmiş yok</p></div>';return;}historyList.innerHTML=drawHistory.map((h,i)=>`<div class="history-item"><span class="history-rank">#${i+1}</span><span class="name-dot" style="background:${h.color};width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span><span class="history-name">${esc(h.name)}</span><span class="history-time">${h.time}</span></div>`).join("");}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+addBtn.addEventListener("click",()=>{addParticipant(nameInput.value);nameInput.value="";nameInput.focus();});
+nameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){addParticipant(nameInput.value);nameInput.value="";}});
+spinBtn.addEventListener("click",spin);
+canvas.addEventListener("click",()=>{if(!spinning)spin();});
+clearAllBtn.addEventListener("click",()=>{participants=[];renderList();drawWheel(0);updateBtn();});
+resultClose.addEventListener("click",()=>{resultOverlay.classList.add("hidden");});
+resultOverlay.addEventListener("click",e=>{if(e.target===resultOverlay)resultOverlay.classList.add("hidden");});
+clearHistoryBtn.addEventListener("click",()=>{drawHistory=[];renderHistory();});
+drawWheel(0);renderList();renderHistory();updateBtn();
+</script>
+
+</body>
+</html>
